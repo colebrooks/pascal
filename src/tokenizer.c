@@ -34,12 +34,20 @@ void print_token(token tok) {
     }
     printf("Token Type: %s, Token Value: %s\n", type, tok.value);
 }
- 
+
 char peek(FILE *fp) {
     char c;
     c = fgetc(fp);
     ungetc(c, fp);
     return c;
+}
+ 
+void consume_whitespace(FILE *fp) {
+    char c = peek(fp);
+    while(c == ' ' || c == '\t' || c == '\n') {
+        fgetc(fp);
+        c = peek(fp);
+    }
 }
 
 void read_word(FILE *fp, char *val) {
@@ -90,6 +98,7 @@ token match_num(char *val) {
 }
 
 void read_sym(FILE *fp, char *val) {
+    // TODO: Rework to include string literals
     char buff[255] = "";
     char c;
     int len = 0;
@@ -120,12 +129,8 @@ token match_sym(char *val) {
 }
 
 token match_token(FILE *fp) {
-    char c = peek(fp); 
-    while(c == ' ' || c == '\t' || c == '\n') {
-        fgetc(fp);
-        c = peek(fp);
-    }
-    
+    consume_whitespace(fp);
+    char c = peek(fp);
     char val[255] = "";
     token ret;
     if(isalpha(c)) {

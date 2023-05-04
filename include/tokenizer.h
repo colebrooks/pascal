@@ -17,7 +17,6 @@ typedef struct token_t {
     char value[255];
 } token;
 
-token next_token();
 void tokenize(FILE *fp);
 
 #endif

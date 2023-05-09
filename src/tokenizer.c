@@ -90,25 +90,83 @@ void read_num(FILE *fp, char *val) {
     strcpy(val, buff);
 }
 
-token match_num(char *val) {
-    token tok;
-    strcpy(tok.value, val);
-    tok.type = LITERAL;
-    return tok;
+void read_string(FILE *fp, char *val) {
+    char buff[255] = "";
+    char c;
+    int len = 0;
+    // TODO: Add single quote escape to strings
+    buff[len++] = '\'';
+    while((c = fgetc(fp)) != '\'')  {
+        buff[len++] = c;
+    }
+    buff[len++] = c;
+    strcpy(val, buff);
+}
+
+void read_double_sym(FILE *fp, char *val, char c) {
+    char buff[2] = "";
+    buff[0] = c;
+    char next = peek(fp);
+    switch(c) {
+    case '<' :
+    case '>' :
+        if(next == '<' || next == '>' || next == '=') {
+            c = fgetc(fp);
+            buff[1] = c;
+        }
+        break;
+
+    case '*' :
+        if(next == '*' || next == '=' || next == ')') {
+            c = fgetc(fp);
+            buff[1] = c;
+        }
+        break;
+
+    case ':' :
+    case '+' :
+    case '-' :
+        if(next == '=') {
+             c = fgetc(fp);
+             buff[1] == c;
+        }
+        break;
+
+    case '/' :
+        if(next == '=' || next == '/') {
+            c = fgetc(fp);
+            buff[1] = c;
+        }
+        break;
+
+    case '(' :
+        if(next == '*' || next == '.') {
+            c = fgetc(fp);
+            buff[1] = c;
+        }
+        break;
+        
+    case '.' :
+        if(next == ')') {
+            c = fgetc(fp);
+            buff[1] = c;
+        }
+        break;
+    }
+    strcpy(val, buff);
 }
 
 void read_sym(FILE *fp, char *val) {
-    // TODO: Rework to include string literals
     char buff[255] = "";
     char c;
     int len = 0;
     c = fgetc(fp);
-    buff[len++] = c;
-    if(c == '<' || c == '>' || c == '*' || c == ':' || c == '+' || c == '-' || c == '/' || c == '(' || c == '.') {
-        c = fgetc(fp);
-        if(c != ' ' && c != '\t' && c != '\n' && !isalpha(c) && !isdigit(c)) {
-            buff[len++] = c;
-        }
+    if(c == '\'') {
+        read_string(fp, buff);
+    } else if(c == '<' || c == '>' || c == '*' || c == ':' || c == '+' || c == '-' || c == '/' || c == '(' || c == '.') {
+        read_double_sym(fp, buff, c);
+    } else {
+        buff[0] = c;
     }
     strcpy(val, buff);
 }
@@ -124,7 +182,13 @@ token match_sym(char *val) {
             operator = 1;
         }
     }
-    tok.type = operator ? OPERATOR : SEPARATOR;
+    if (val[0] == '\'') {
+        tok.type = LITERAL;
+    } else if (operator) {
+        tok.type = OPERATOR;
+    } else {
+        tok.type = SEPARATOR;
+    }
     return tok;
 }
 
@@ -138,7 +202,8 @@ token match_token(FILE *fp) {
         ret = match_word(val);
     } else if(isdigit(c)) {
         read_num(fp, val);
-        ret = match_num(val);
+        ret.type = LITERAL;
+        strcpy(ret.value, val);
     } else {
         read_sym(fp, val);
         ret = match_sym(val);

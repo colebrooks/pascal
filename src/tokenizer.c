@@ -6,7 +6,7 @@
 #include "tokenizer.h"
 
 const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln"};
-const char *separators[] = {";", "(", ")", ",", "'"};
+const char *separators[] = {";", "(", ")", ","};
 const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":=", "+=", "-=", "*=", "/="};
 const char double_syms[] = {'<', '>', '*', ':', '+', '-', '/', '(', '.'};
 token *head = NULL;
@@ -83,37 +83,38 @@ void consume_whitespace(FILE *fp) {
     }
 }
 
-void read_word(FILE *fp, char *val) {
+token read_word(FILE *fp) {
     // TODO: Rework to make more elegant, prevent reading of EOF as word
     char buff[255] = "";
     char c;
     int len = 0;
+    token tok;
 
     while(isalpha((c = fgetc(fp)))) {
         buff[len++] = c;
     }
     ungetc(c, fp);  // Unget final nonalpha char
-    strcpy(val, buff);
-}
 
-token match_word(char val[]) {
-    token tok;
-    strcpy(tok.value, val);
-    tok.type = keyword(val) ? KEYWORD : IDENTIFIER;
+    strcpy(tok.value, buff);
+    tok.type = keyword(buff) ? KEYWORD : IDENTIFIER;
     return tok;
 }
 
-void read_num(FILE *fp, char *val) {
+token read_num(FILE *fp) {
     // TODO: Implement floats
     char buff[255] = "";
     char c;
     int len = 0;
+    token tok;
 
     while(isdigit(c = fgetc(fp))) {
         buff[len++] = c;
     }
     ungetc(c, fp);  // Unget final nondigit char
-    strcpy(val, buff);
+
+    strcpy(tok.value, buff);
+    tok.type = LITERAL;
+    return tok;
 }
 
 void read_string(FILE *fp, char *val) {
@@ -177,10 +178,12 @@ void read_double_sym(FILE *fp, char *val, char c) {
     strcpy(val, buff);
 }
 
-void read_sym(FILE *fp, char *val) {
+token read_sym(FILE *fp) {
     char buff[255] = "";
     char c;
     int len = 0;
+    token tok;
+
     c = fgetc(fp);
     if(c == '\'') {
         read_string(fp, buff);
@@ -189,16 +192,12 @@ void read_sym(FILE *fp, char *val) {
     } else {
         buff[0] = c;
     }
-    strcpy(val, buff);
-}
 
-token match_sym(char *val) {
-    token tok;
-    strcpy(tok.value, val);
+    strcpy(tok.value, buff);
 
-    if (val[0] == '\'') {
+    if (buff[0] == '\'') {
         tok.type = LITERAL;
-    } else if (operator(val)) {
+    } else if (operator(buff)) {
         tok.type = OPERATOR;
     } else {
         tok.type = SEPARATOR;
@@ -206,21 +205,17 @@ token match_sym(char *val) {
     return tok;
 }
 
-token match_token(FILE *fp) {
+token get_token(FILE *fp) {
     consume_whitespace(fp);
     token ret;
     char val[255] = "";
     char c = peek(fp);
     if(isalpha(c)) {
-        read_word(fp, val);
-        ret = match_word(val);
+        ret = read_word(fp);
     } else if(isdigit(c)) {
-        read_num(fp, val);
-        ret.type = LITERAL;
-        strcpy(ret.value, val);
+        ret = read_num(fp);
     } else {
-        read_sym(fp, val);
-        ret = match_sym(val);
+        ret = read_sym(fp);
     }
     return ret;
 }
@@ -229,13 +224,13 @@ token *tokenize(char *filename) {
     FILE *fp;
     fp = fopen(filename, "r");
     while (!feof(fp)) {
-        token *next = (token *)malloc(sizeof(token));
-        *next = match_token(fp);
+        token *new = (token *)malloc(sizeof(token));
+        *new = get_token(fp);
         if(head == NULL) {
-            head = next;
+            head = new;
             current = head;
         } else {
-            current->next = next;
+            current->next = new;
             current = current->next;
         }
     }

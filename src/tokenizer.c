@@ -1,14 +1,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #include "tokenizer.h"
 
 const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln"};
 const char *separators[] = {";", "(", ")", ",", "'"};
-const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":="};
-token *head;
-token *current;
+const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":=", "+=", "-=", "*=", "/="};
+const char double_syms[] = {'<', '>', '*', ':', '+', '-', '/', '(', '.'};
+token *head = NULL;
+token *current = NULL;
 int num_tokens = 0;
 
 void print_token(token tok) {
@@ -42,6 +44,36 @@ char peek(FILE *fp) {
     ungetc(c, fp);
     return c;
 }
+
+bool double_symbol(char c) {
+    int len = sizeof(double_syms) / sizeof(double_syms[0]);
+    for(int i = 0; i < len; i++) {
+        if(c == double_syms[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool operator(char *val) {
+    int len = sizeof(operators) / sizeof(operators[0]);
+    for(int i = 0; i < len; i++) {
+        if(!strcmp(val, operators[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool keyword(char *val) {
+    int len = sizeof(keywords) / sizeof(keywords[0]);
+    for(int i = 0; i < len; i++) {
+        if(!strcmp(val, keywords[i])) {
+            return true;
+        }
+    }
+    return false;
+}
  
 void consume_whitespace(FILE *fp) {
     char c = peek(fp);
@@ -52,6 +84,7 @@ void consume_whitespace(FILE *fp) {
 }
 
 void read_word(FILE *fp, char *val) {
+    // TODO: Rework to make more elegant, prevent reading of EOF as word
     char buff[255] = "";
     char c;
     int len = 0;
@@ -66,20 +99,12 @@ void read_word(FILE *fp, char *val) {
 token match_word(char val[]) {
     token tok;
     strcpy(tok.value, val);
-
-    int len = sizeof(keywords) / sizeof(keywords[0]);
-    int keyword = 0;
-    for(int i = 0; i < len; i++) {
-        if(!strcmp(val, keywords[i])) {
-            keyword = 1;
-            break;
-        }    
-    }
-    tok.type = keyword ? KEYWORD : IDENTIFIER;
+    tok.type = keyword(val) ? KEYWORD : IDENTIFIER;
     return tok;
 }
 
 void read_num(FILE *fp, char *val) {
+    // TODO: Implement floats
     char buff[255] = "";
     char c;
     int len = 0;
@@ -109,21 +134,19 @@ void read_double_sym(FILE *fp, char *val, char c) {
     buff[0] = c;
     char next = peek(fp);
     switch(c) {
-    case '<' :
+    case '<' : 
     case '>' :
         if(next == '<' || next == '>' || next == '=') {
             c = fgetc(fp);
             buff[1] = c;
         }
         break;
-
     case '*' :
         if(next == '*' || next == '=' || next == ')') {
             c = fgetc(fp);
             buff[1] = c;
         }
         break;
-
     case ':' :
     case '+' :
     case '-' :
@@ -132,21 +155,18 @@ void read_double_sym(FILE *fp, char *val, char c) {
              buff[1] == c;
         }
         break;
-
     case '/' :
         if(next == '=' || next == '/') {
             c = fgetc(fp);
             buff[1] = c;
         }
         break;
-
     case '(' :
         if(next == '*' || next == '.') {
             c = fgetc(fp);
             buff[1] = c;
         }
         break;
-        
     case '.' :
         if(next == ')') {
             c = fgetc(fp);
@@ -164,7 +184,7 @@ void read_sym(FILE *fp, char *val) {
     c = fgetc(fp);
     if(c == '\'') {
         read_string(fp, buff);
-    } else if(c == '<' || c == '>' || c == '*' || c == ':' || c == '+' || c == '-' || c == '/' || c == '(' || c == '.') {
+    } else if(double_symbol(c)) {
         read_double_sym(fp, buff, c);
     } else {
         buff[0] = c;
@@ -175,17 +195,10 @@ void read_sym(FILE *fp, char *val) {
 token match_sym(char *val) {
     token tok;
     strcpy(tok.value, val);
-    int operator = 0;
 
-    int len = sizeof(operators) / sizeof(operators[0]);
-    for(int i = 0; i < len; i++) {
-        if(!strcmp(val, operators[i])) {
-            operator = 1;
-        }
-    }
     if (val[0] == '\'') {
         tok.type = LITERAL;
-    } else if (operator) {
+    } else if (operator(val)) {
         tok.type = OPERATOR;
     } else {
         tok.type = SEPARATOR;
@@ -193,40 +206,39 @@ token match_sym(char *val) {
     return tok;
 }
 
-token * match_token(FILE *fp) {
+token match_token(FILE *fp) {
     consume_whitespace(fp);
-    token *ret = (token *)malloc(sizeof(token));
+    token ret;
     char val[255] = "";
     char c = peek(fp);
     if(isalpha(c)) {
         read_word(fp, val);
-        *ret = match_word(val);
+        ret = match_word(val);
     } else if(isdigit(c)) {
         read_num(fp, val);
-        ret->type = LITERAL;
-        strcpy(ret->value, val);
+        ret.type = LITERAL;
+        strcpy(ret.value, val);
     } else {
         read_sym(fp, val);
-        *ret = match_sym(val);
+        ret = match_sym(val);
     }
-    print_token(*ret);
     return ret;
 }
 
-token * tokenize(char *filename) {
+token *tokenize(char *filename) {
     FILE *fp;
     fp = fopen(filename, "r");
     while (!feof(fp)) {
-        token *next = match_token(fp);
-        if(num_tokens == 0) {
+        token *next = (token *)malloc(sizeof(token));
+        *next = match_token(fp);
+        if(head == NULL) {
             head = next;
             current = head;
         } else {
             current->next = next;
             current = current->next;
         }
-        num_tokens++;
     }
     fclose(fp);
     return head;
-} 
+}

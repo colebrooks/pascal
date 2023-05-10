@@ -31,7 +31,11 @@ int main(int argc, char *argv[]) {
         printf("Please input a file to parse.\n");
         return 1;
     } else {
-        tokenize(argv[1]);
+        token *tok = tokenize(argv[1]);
+        while(tok != NULL) {
+            print_token(*tok);
+            tok = tok->next;
+        }
     }
     return 0;
 }

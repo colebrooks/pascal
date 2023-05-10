@@ -18,6 +18,7 @@ typedef struct token_t {
     struct token_t *next;
 } token;
 
-token * tokenize(char *filename);
+token *tokenize(char *);
+void print_token(token);
 
 #endif

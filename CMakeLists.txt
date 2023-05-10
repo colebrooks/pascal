@@ -7,6 +7,7 @@ enable_testing()
 set(SOURCES
     src/main.c
     src/tokenizer.c
+    src/parser.c
 )
 
 add_executable(Pascal_Interpreter ${SOURCES})

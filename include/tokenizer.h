@@ -15,8 +15,9 @@ enum token_type {
 typedef struct token_t {
     enum token_type type;
     char value[255];
+    struct token_t *next;
 } token;
 
-void tokenize(FILE *fp);
+token * tokenize(char *filename);
 
 #endif

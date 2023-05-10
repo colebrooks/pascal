@@ -7,7 +7,8 @@
 const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln"};
 const char *separators[] = {";", "(", ")", ",", "'"};
 const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":="};
-token tokens[255];
+token *head;
+token *current;
 int num_tokens = 0;
 
 void print_token(token tok) {
@@ -192,29 +193,40 @@ token match_sym(char *val) {
     return tok;
 }
 
-token match_token(FILE *fp) {
+token * match_token(FILE *fp) {
     consume_whitespace(fp);
-    char c = peek(fp);
+    token *ret = (token *)malloc(sizeof(token));
     char val[255] = "";
-    token ret;
+    char c = peek(fp);
     if(isalpha(c)) {
         read_word(fp, val);
-        ret = match_word(val);
+        *ret = match_word(val);
     } else if(isdigit(c)) {
         read_num(fp, val);
-        ret.type = LITERAL;
-        strcpy(ret.value, val);
+        ret->type = LITERAL;
+        strcpy(ret->value, val);
     } else {
         read_sym(fp, val);
-        ret = match_sym(val);
+        *ret = match_sym(val);
     }
-    print_token(ret);
+    print_token(*ret);
     return ret;
 }
 
-void tokenize(FILE *fp) {
-    int current_token = 0;
+token * tokenize(char *filename) {
+    FILE *fp;
+    fp = fopen(filename, "r");
     while (!feof(fp)) {
-        tokens[current_token++] = match_token(fp);
+        token *next = match_token(fp);
+        if(num_tokens == 0) {
+            head = next;
+            current = head;
+        } else {
+            current->next = next;
+            current = current->next;
+        }
+        num_tokens++;
     }
+    fclose(fp);
+    return head;
 } 

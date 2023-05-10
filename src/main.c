@@ -27,13 +27,11 @@
 // }
 
 int main(int argc, char *argv[]) {
-    FILE *source;
     if(argc != 2) {
         printf("Please input a file to parse.\n");
         return 1;
     } else {
-        source = fopen(argv[1], "r");
+        tokenize(argv[1]);
     }
-    tokenize(source);
     return 0;
 }

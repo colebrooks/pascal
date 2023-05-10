@@ -55,6 +55,16 @@ bool double_symbol(char c) {
     return false;
 }
 
+bool separator(char *val) {
+    int len = sizeof(separators) / sizeof(separators[0]);
+    for(int i = 0; i < len; i++) {
+        if(!strcmp(val, separators[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool operator(char *val) {
     int len = sizeof(operators) / sizeof(operators[0]);
     for(int i = 0; i < len; i++) {
@@ -179,6 +189,7 @@ void read_double_sym(FILE *fp, char *val, char c) {
 }
 
 token read_sym(FILE *fp) {
+    // TODO: Add error handling for unknown symbols
     char buff[255] = "";
     char c;
     int len = 0;
@@ -199,7 +210,7 @@ token read_sym(FILE *fp) {
         tok.type = LITERAL;
     } else if (operator(buff)) {
         tok.type = OPERATOR;
-    } else {
+    } else if(separator(buff)) {
         tok.type = SEPARATOR;
     }
     return tok;

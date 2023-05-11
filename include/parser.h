@@ -1,3 +1,3 @@
 #include "tokenizer.h"
 
-void parse(token *);
+int parse(token *);

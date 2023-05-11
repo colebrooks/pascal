@@ -8,6 +8,7 @@ set(SOURCES
     src/main.c
     src/tokenizer.c
     src/parser.c
+    src/generator.c
 )
 
 add_executable(Pascal_Interpreter ${SOURCES})

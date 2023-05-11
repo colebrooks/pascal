@@ -5,7 +5,7 @@
 
 #include "tokenizer.h"
 
-const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln"};
+const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln", "while"};
 const char *separators[] = {";", "(", ")", ","};
 const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":=", "+=", "-=", "*=", "/="};
 const char double_syms[] = {'<', '>', '*', ':', '+', '-', '/', '(', '.'};
@@ -36,6 +36,12 @@ void print_token(token tok) {
             break;
     }
     printf("Token Type: %s, Token Value: %s\n", type, tok.value);
+}
+
+token *next_token(token *current) {
+    token *next = current->next;
+    free(current);
+    return next;
 }
 
 char peek(FILE *fp) {

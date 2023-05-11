@@ -3,22 +3,23 @@
 
 #include <stdio.h>
 
-enum token_type {
+typedef enum {
     IDENTIFIER,
     KEYWORD,
     SEPARATOR,
     OPERATOR,
     LITERAL,
     COMMENT
-};
+} token_type;
 
 typedef struct token_t {
-    enum token_type type;
+    token_type type;
     char value[255];
     struct token_t *next;
 } token;
 
 token *tokenize(char *);
 void print_token(token);
+token *next_token(token *);
 
 #endif

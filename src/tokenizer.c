@@ -6,12 +6,13 @@
 #include "tokenizer.h"
 
 const char *keywords[] = {"program", "function", "integer", "longint", "begin", "if", "then", "else", "end", "var", "for", "to", "do", "writeln", "while"};
-const char *separators[] = {";", "(", ")", ","};
+const char *separators[] = {";", "(", ")", ",", "."};
 const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":=", "+=", "-=", "*=", "/="};
 const char double_syms[] = {'<', '>', '*', ':', '+', '-', '/', '(', '.'};
 token *head = NULL;
 token *current = NULL;
 int num_tokens = 0;
+int line = 1;
 
 void print_token(token tok) {
     char type[255];
@@ -35,10 +36,11 @@ void print_token(token tok) {
             strcpy(type, "COMMENT");
             break;
     }
-    printf("Token Type: %s, Token Value: %s\n", type, tok.value);
+    printf("Token Type: %-15s Token Value: %-15s Line: %d\n", type, tok.value, tok.line);
 }
 
 token *next_token(token *current) {
+    if(!current->next) return NULL;
     token *next = current->next;
     free(current);
     return next;
@@ -95,8 +97,18 @@ void consume_whitespace(FILE *fp) {
     char c = peek(fp);
     while(c == ' ' || c == '\t' || c == '\n') {
         fgetc(fp);
+        if(c == '\n') line++;
         c = peek(fp);
     }
+}
+
+token new_token(token_type type, char *val) {
+    token tok;
+    tok.type = type;
+    tok.line = line;
+    strcpy(tok.value, val);
+    tok.next = NULL;
+    return tok;
 }
 
 token read_word(FILE *fp) {
@@ -104,16 +116,14 @@ token read_word(FILE *fp) {
     char buff[255] = "";
     char c;
     int len = 0;
-    token tok;
 
     while(isalpha((c = fgetc(fp)))) {
         buff[len++] = c;
     }
     ungetc(c, fp);  // Unget final nonalpha char
 
-    strcpy(tok.value, buff);
-    tok.type = keyword(buff) ? KEYWORD : IDENTIFIER;
-    return tok;
+    token_type type = keyword(buff) ? KEYWORD : IDENTIFIER;
+    return new_token(type, buff);
 }
 
 token read_num(FILE *fp) {
@@ -121,16 +131,13 @@ token read_num(FILE *fp) {
     char buff[255] = "";
     char c;
     int len = 0;
-    token tok;
 
     while(isdigit(c = fgetc(fp))) {
         buff[len++] = c;
     }
     ungetc(c, fp);  // Unget final nondigit char
 
-    strcpy(tok.value, buff);
-    tok.type = LITERAL;
-    return tok;
+    return new_token(LITERAL, buff);
 }
 
 void read_string(FILE *fp, char *val) {
@@ -198,8 +205,7 @@ token read_sym(FILE *fp) {
     // TODO: Add error handling for unknown symbols
     char buff[255] = "";
     char c;
-    int len = 0;
-    token tok;
+    token_type type;
 
     c = fgetc(fp);
     if(c == '\'') {
@@ -210,31 +216,29 @@ token read_sym(FILE *fp) {
         buff[0] = c;
     }
 
-    strcpy(tok.value, buff);
-
     if (buff[0] == '\'') {
-        tok.type = LITERAL;
+        type = LITERAL;
     } else if (operator(buff)) {
-        tok.type = OPERATOR;
+        type = OPERATOR;
     } else if(separator(buff)) {
-        tok.type = SEPARATOR;
+        type = SEPARATOR;
     }
-    return tok;
+    return new_token(type, buff);
 }
 
 token get_token(FILE *fp) {
     consume_whitespace(fp);
-    token ret;
+    token tok;
     char val[255] = "";
     char c = peek(fp);
     if(isalpha(c)) {
-        ret = read_word(fp);
+        tok = read_word(fp);
     } else if(isdigit(c)) {
-        ret = read_num(fp);
+        tok = read_num(fp);
     } else {
-        ret = read_sym(fp);
+        tok = read_sym(fp);
     }
-    return ret;
+    return tok;
 }
 
 token *tokenize(char *filename) {

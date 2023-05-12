@@ -1,10 +1,9 @@
 #include "parser.h"
 
 int parse(token *head) {
-    token *current = head;
-    while(current != NULL) {
-        print_token(*current);
-        current = next_token(current);
+    while(head) {
+        print_token(*head);
+        head = next_token(head);
     }
     return 0;
 }

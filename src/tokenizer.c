@@ -10,7 +10,7 @@ const char *separators[] = {";", "(", ")", ",", "."};
 const char *operators[] = {"+", "-" , "*" , "/", "%", "=", "<>", "<", ">", "<=", ">=", ":=", "+=", "-=", "*=", "/="};
 const char double_syms[] = {'<', '>', '*', ':', '+', '-', '/', '(', '.'};
 token *head = NULL;
-token *current = NULL;
+static token *current = NULL;
 int num_tokens = 0;
 int line = 1;
 int pos = 1;

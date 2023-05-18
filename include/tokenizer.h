@@ -16,11 +16,12 @@ typedef struct token_t {
     token_type type;
     char value[255];
     int line;
+    int pos;
     struct token_t *next;
 } token;
 
 token *tokenize(char *);
 void print_token(token);
-token *next_token(token *);
+// token *next_token(token *);
 
 #endif

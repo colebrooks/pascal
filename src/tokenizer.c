@@ -13,6 +13,7 @@ token *head = NULL;
 token *current = NULL;
 int num_tokens = 0;
 int line = 1;
+int pos = 1;
 
 void print_token(token tok) {
     char type[255];
@@ -36,15 +37,15 @@ void print_token(token tok) {
             strcpy(type, "COMMENT");
             break;
     }
-    printf("Token Type: %-15s Token Value: %-15s Line: %d\n", type, tok.value, tok.line);
+    printf("Token Type: %-15s Token Value: %-15s Line: %-15d Position: %-15d\n", type, tok.value, tok.line, tok.pos);
 }
 
-token *next_token(token *current) {
-    if(!current->next) return NULL;
-    token *next = current->next;
-    free(current);
-    return next;
-}
+// token *next_token(token *current) {
+//     if(!current->next) return NULL;
+//     token *next = current->next;
+//     free(current);
+//     return next;
+// }
 
 char peek(FILE *fp) {
     char c;
@@ -93,11 +94,20 @@ bool keyword(char *val) {
     return false;
 }
  
+char get_char(FILE *fp) {
+    char c = fgetc(fp);
+    pos++;
+    return c;
+}
+
 void consume_whitespace(FILE *fp) {
     char c = peek(fp);
     while(c == ' ' || c == '\t' || c == '\n') {
-        fgetc(fp);
-        if(c == '\n') line++;
+        get_char(fp);
+        if(c == '\n') {
+            line++;
+            pos = 1;
+        }
         c = peek(fp);
     }
 }
@@ -106,6 +116,7 @@ token new_token(token_type type, char *val) {
     token tok;
     tok.type = type;
     tok.line = line;
+    tok.pos = pos - strlen(val);
     strcpy(tok.value, val);
     tok.next = NULL;
     return tok;
@@ -117,10 +128,10 @@ token read_word(FILE *fp) {
     char c;
     int len = 0;
 
-    while(isalpha((c = fgetc(fp)))) {
+    while(isalpha((c = peek(fp)))) {
         buff[len++] = c;
+        get_char(fp);
     }
-    ungetc(c, fp);  // Unget final nonalpha char
 
     token_type type = keyword(buff) ? KEYWORD : IDENTIFIER;
     return new_token(type, buff);
@@ -132,10 +143,10 @@ token read_num(FILE *fp) {
     char c;
     int len = 0;
 
-    while(isdigit(c = fgetc(fp))) {
+    while(isdigit(c = peek(fp))) {
         buff[len++] = c;
+        get_char(fp);
     }
-    ungetc(c, fp);  // Unget final nondigit char
 
     return new_token(LITERAL, buff);
 }
@@ -146,7 +157,7 @@ void read_string(FILE *fp, char *val) {
     int len = 0;
     // TODO: Add single quote escape to strings
     buff[len++] = '\'';
-    while((c = fgetc(fp)) != '\'')  {
+    while((c = get_char(fp)) != '\'')  {
         buff[len++] = c;
     }
     buff[len++] = c;
@@ -161,13 +172,13 @@ void read_double_sym(FILE *fp, char *val, char c) {
     case '<' : 
     case '>' :
         if(next == '<' || next == '>' || next == '=') {
-            c = fgetc(fp);
+            c = get_char(fp);
             buff[1] = c;
         }
         break;
     case '*' :
         if(next == '*' || next == '=' || next == ')') {
-            c = fgetc(fp);
+            c = get_char(fp);
             buff[1] = c;
         }
         break;
@@ -175,25 +186,25 @@ void read_double_sym(FILE *fp, char *val, char c) {
     case '+' :
     case '-' :
         if(next == '=') {
-             c = fgetc(fp);
+             c = get_char(fp);
              buff[1] == c;
         }
         break;
     case '/' :
         if(next == '=' || next == '/') {
-            c = fgetc(fp);
+            c = get_char(fp);
             buff[1] = c;
         }
         break;
     case '(' :
         if(next == '*' || next == '.') {
-            c = fgetc(fp);
+            c = get_char(fp);
             buff[1] = c;
         }
         break;
     case '.' :
         if(next == ')') {
-            c = fgetc(fp);
+            c = get_char(fp);
             buff[1] = c;
         }
         break;
@@ -207,7 +218,7 @@ token read_sym(FILE *fp) {
     char c;
     token_type type;
 
-    c = fgetc(fp);
+    c = get_char(fp);
     if(c == '\'') {
         read_string(fp, buff);
     } else if(double_symbol(c)) {
